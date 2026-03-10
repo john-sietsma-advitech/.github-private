@@ -1,6 +1,8 @@
 ---
 name: dev-flow.jira-task
 description: Fetch task details from Jira and hand off to @dev-flow.task to create the feature branch and specification.
+argument-hint: "<TICKET-ID>  e.g. VAC-123"
+target: vscode
 handoffs:
   - label: Create Feature Spec
     agent: dev-flow.task

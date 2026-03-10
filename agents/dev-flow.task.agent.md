@@ -1,6 +1,15 @@
 ---
 name: dev-flow.task
 description: Create a feature branch and specification from a task description, or from structured input handed off by @dev-flow.jira-task.
+argument-hint: "<TICKET-ID> <summary>  or  plain task description"
+target: vscode
+tools:
+  [
+    "execute/runInTerminal",
+    "read/readFile",
+    "edit/editFiles",
+    "search/fileSearch",
+  ]
 handoffs:
   - label: Clarify Feature Requirements
     agent: dev-flow.clarify

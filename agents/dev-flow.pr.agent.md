@@ -1,6 +1,9 @@
 ---
 name: dev-flow.pr
 description: Create a Bitbucket pull request with conventional commit title and concise change summary
+argument-hint: "(optional) target branch or extra notes — runs on current feature branch"
+target: vscode
+tools: ["execute/runInTerminal", "read/readFile", "search/changes"]
 ---
 
 ## User Input

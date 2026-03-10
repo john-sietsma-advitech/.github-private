@@ -2,22 +2,20 @@
 
 Development workflow automation for GitHub Copilot — spec-driven task management, code review, and Bitbucket PR integration.
 
-## Quick Start
+## Overview
 
-```bash
-# Run once without installing
-uvx --from git+ssh://git@bitbucket.org/advitech/dev-flow.git dev-flow init
+Dev Flow provides a set of GitHub Copilot agents and supporting scripts that automate the development workflow:
 
-# Or install globally and reuse across projects
-uv tool install git+ssh://git@bitbucket.org/advitech/dev-flow.git
-dev-flow init
-```
+- Create feature branches and spec files from Jira tickets or plain descriptions
+- Clarify and refine specs before implementation
+- Review code changes against engineering standards
+- Create Bitbucket pull requests with conventional commit titles
 
-`dev-flow init` copies agents, instructions, scripts, and templates into your project. It prompts before overwriting existing files.
+These agents are defined in this `.github-private` repository and are automatically available to all members of the organisation in GitHub Copilot Chat — no installation required.
 
 ## Agents
 
-Once installed, invoke agents in GitHub Copilot Chat using `@dev-flow.<name>`.
+Invoke agents in GitHub Copilot Chat using `@dev-flow.<name>`.
 
 | Agent         | Command                        | Purpose                                                                                    |
 | ------------- | ------------------------------ | ------------------------------------------------------------------------------------------ |
@@ -50,32 +48,36 @@ Once installed, invoke agents in GitHub Copilot Chat using `@dev-flow.<name>`.
 5. @dev-flow.pr                            — create or update PR
 ```
 
-## Configuration
+## Setup
+
+### Prerequisites
+
+- GitHub Copilot with organisation-level custom agents enabled (`github.copilot.chat.organizationCustomAgents.enabled: true` in VS Code settings)
+- PowerShell 7+ installed on each developer machine
+- Scripts and templates copied into each project repo (see [Per-project setup](#per-project-setup) below)
+
+### Per-project setup
+
+The agents reference scripts and templates that must exist in each project repository. Copy the following into the root of each project repo:
+
+```
+your-project/
+├── scripts/             # Copy from this repo
+├── templates/           # Copy from this repo
+└── docs/
+    └── specs/           # Create empty — spec files are stored here
+```
 
 ### Jira / Bitbucket
 
-1. Install the [Atlassian MCP server](https://support.atlassian.com/atlassian-rovo-mcp-server/docs/getting-started-with-the-atlassian-remote-mcp-server/) for Jira integration.
-2. [Generate a scoped Atlassian API token](https://id.atlassian.com/manage-profile/security/api-tokens) with `pullrequest:read` and `pullrequest:write` permissions for Bitbucket PR creation.
+1. Install the [Atlassian MCP server](https://support.atlassian.com/atlassian-rovo-mcp-server/docs/getting-started-with-the-atlassian-remote-mcp-server/) for Jira integration (`@dev-flow.jira-task`).
+2. [Generate an Atlassian API token](https://id.atlassian.com/manage-profile/security/api-tokens) with `pullrequest:read` and `pullrequest:write` permissions for Bitbucket PR creation.
 
 Credentials are resolved in order: environment variables → `~/.atlassian`:
 
 ```
 ATLASSIAN_API_KEY=<API_KEY>
 ATLASSIAN_EMAIL=<EMAIL>   # optional — defaults to git config user.email
-```
-
-## What Gets Installed
-
-```
-your-project/
-├── .github/
-│   ├── agents/          # Copilot agent files
-│   └── instructions/    # Language and engineering standards
-├── scripts/             # PowerShell automation scripts
-├── templates/           # spec-template.md
-├── README.md            # This file
-└── docs/
-    └── specs/           # Created empty — store your spec files here
 ```
 
 ## Scripts

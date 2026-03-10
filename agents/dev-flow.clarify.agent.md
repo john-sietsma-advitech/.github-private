@@ -1,6 +1,9 @@
 ---
 name: dev-flow.clarify
 description: Identify underspecified areas in the current feature spec by asking up to 5 highly targeted clarification questions and encoding answers back into the spec.
+argument-hint: "(optional) focus area — runs on current feature branch"
+target: vscode
+tools: ["execute/runInTerminal", "read/readFile", "edit/editFiles"]
 ---
 
 ## User Input

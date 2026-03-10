@@ -1,6 +1,15 @@
 ---
 name: dev-flow.review
 description: Review code changes against best practices, software engineering principles, and language-specific standards.
+argument-hint: "(optional) specific files or areas to focus on"
+target: vscode
+tools:
+  [
+    "execute/runInTerminal",
+    "search/changes",
+    "read/readFile",
+    "search/fileSearch",
+  ]
 ---
 
 ## User Input

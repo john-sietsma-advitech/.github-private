@@ -1,4 +1,5 @@
 ---
+name: dev-flow.jira-task
 description: Fetch task details from Jira and hand off to @dev-flow.task to create the feature branch and specification.
 handoffs:
   - label: Create Feature Spec

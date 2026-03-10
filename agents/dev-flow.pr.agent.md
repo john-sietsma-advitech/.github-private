@@ -1,4 +1,5 @@
 ---
+name: dev-flow.pr
 description: Create a Bitbucket pull request with conventional commit title and concise change summary
 ---
 

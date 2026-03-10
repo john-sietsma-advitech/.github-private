@@ -1,4 +1,5 @@
 ---
+name: dev-flow.task
 description: Create a feature branch and specification from a task description, or from structured input handed off by @dev-flow.jira-task.
 handoffs:
   - label: Clarify Feature Requirements
@@ -91,7 +92,7 @@ Read `README.md` and `.github/instructions/copilot-instructions.md` to understan
    Reply 'yes' to proceed, or 'no' to cancel.
    ```
 
-   *(The `Branch:` line MUST reflect the inferred prefix, e.g. `bugfix/` or `chore/` as appropriate.)*
+   _(The `Branch:` line MUST reflect the inferred prefix, e.g. `bugfix/` or `chore/` as appropriate.)_
 
    g. After confirmation, create branch and spec file, passing `BASE_BRANCH` explicitly:
 

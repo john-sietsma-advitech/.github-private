@@ -1,14 +1,172 @@
-# Custom agents template
+# Dev Flow
 
-This template repository makes it easy for enterprise and organization owners to get started with Copilot custom agents by providing:
-* The basic file structure necessary for custom agents
-* An example agent profile in the `agents` directory
+Development workflow automation for GitHub Copilot — spec-driven task management, code review, and Bitbucket PR integration.
 
-> [!NOTE]
-> The example agent profile is commented out, so you can use this template repository without unintentionally making a custom agent available to your team.
+## Quick Start
 
-## Getting started
+```bash
+# Run once without installing
+uvx --from git+ssh://git@bitbucket.org/advitech/dev-flow.git dev-flow init
 
-1. Using this template repository, create a private repository called `.github-private` in your organization.
-1. Edit this README to best meet your needs. Consider including creation guidelines for custom agents or compliance considerations specific to your team.
-1. Edit the provided `agents/example-agent.md` file to create your first custom agent. For more information, see [Creating custom agents](https://docs.github.com/copilot/how-tos/use-copilot-agents/coding-agent/create-custom-agents).
+# Or install globally and reuse across projects
+uv tool install git+ssh://git@bitbucket.org/advitech/dev-flow.git
+dev-flow init
+```
+
+`dev-flow init` copies agents, instructions, scripts, and templates into your project. It prompts before overwriting existing files.
+
+## Agents
+
+Once installed, invoke agents in GitHub Copilot Chat using `@dev-flow.<name>`.
+
+| Agent         | Command                        | Purpose                                                                                    |
+| ------------- | ------------------------------ | ------------------------------------------------------------------------------------------ |
+| **Jira Task** | `@dev-flow.jira-task VAC-123`  | Fetch a Jira ticket and hand off to `@dev-flow.task`                                       |
+| **Task**      | `@dev-flow.task <description>` | Create feature branch and specification from a task description or Jira handoff            |
+| **Clarify**   | `@dev-flow.clarify`            | Ask targeted clarification questions about underspecified areas in your spec               |
+| **Review**    | `@dev-flow.review`             | Review code changes against best practices, engineering principles, and language standards |
+| **PR**        | `@dev-flow.pr`                 | Create or update a Bitbucket pull request with conventional commit format and summary      |
+
+## Workflow
+
+**With Jira:**
+
+```
+1. @dev-flow.jira-task VAC-123   — fetch ticket, hand off to task agent
+2. @dev-flow.task                — create branch + spec
+3. @dev-flow.clarify             — refine spec
+4. Implement feature
+5. @dev-flow.review              — review changes
+6. @dev-flow.pr                  — create or update PR
+```
+
+**Without Jira:**
+
+```
+1. @dev-flow.task Implement OAuth2 login   — create branch + spec from description
+2. @dev-flow.clarify                       — refine spec
+3. Implement feature
+4. @dev-flow.review                        — review changes
+5. @dev-flow.pr                            — create or update PR
+```
+
+## Configuration
+
+### Jira / Bitbucket
+
+1. Install the [Atlassian MCP server](https://support.atlassian.com/atlassian-rovo-mcp-server/docs/getting-started-with-the-atlassian-remote-mcp-server/) for Jira integration.
+2. [Generate a scoped Atlassian API token](https://id.atlassian.com/manage-profile/security/api-tokens) with `pullrequest:read` and `pullrequest:write` permissions for Bitbucket PR creation.
+
+Credentials are resolved in order: environment variables → `~/.atlassian`:
+
+```
+ATLASSIAN_API_KEY=<API_KEY>
+ATLASSIAN_EMAIL=<EMAIL>   # optional — defaults to git config user.email
+```
+
+## What Gets Installed
+
+```
+your-project/
+├── .github/
+│   ├── agents/          # Copilot agent files
+│   └── instructions/    # Language and engineering standards
+├── scripts/             # PowerShell automation scripts
+├── templates/           # spec-template.md
+├── README.md            # This file
+└── docs/
+    └── specs/           # Created empty — store your spec files here
+```
+
+## Scripts
+
+| Script                    | Description                                                           |
+| ------------------------- | --------------------------------------------------------------------- |
+| `create-task-spec.ps1`    | Create a task branch and spec file from a ticket ID and summary       |
+| `create-pr.ps1`           | Create a Bitbucket pull request via API                               |
+| `check-prerequisites.ps1` | Verify the current branch has a spec file; output paths               |
+| `rebase-onto.ps1`         | Rebase the current branch onto a target using the recorded fork point |
+| `common.ps1`              | Shared utility functions (sourced by other scripts)                   |
+
+## create-pr.ps1
+
+Creates a Bitbucket pull request. Called by the `@dev-flow.pr` agent but can
+also be used directly.
+
+### Usage
+
+```powershell
+.\scripts\create-pr.ps1 `
+  -Title        "feat: add login page" `
+  -Description  "## Summary..." `
+  -TargetBranch main
+```
+
+### Credential resolution (in order)
+
+1. Environment variables: `ATLASSIAN_API_KEY`, `ATLASSIAN_EMAIL`
+2. File: `~/.atlassian`
+
+File format:
+
+```
+ATLASSIAN_API_KEY=<api_key>
+ATLASSIAN_EMAIL=<email>        # optional — defaults to git config user.email
+```
+
+### Exit codes
+
+| Code | Meaning                                                            |
+| ---- | ------------------------------------------------------------------ |
+| 0    | Success — PR created                                               |
+| 1    | Fatal error (missing required parameter, bad branch, push failure) |
+| 2    | Non-fatal — credentials missing or API error; fallback URL printed |
+
+## rebase-onto.ps1
+
+Use this script after the base branch of your feature has been squash-merged into `main`
+(or another target). Because squash-merge rewrites history, a plain `git rebase origin/main`
+will try to replay every commit including those from the base branch. `rebase-onto.ps1` reads
+the fork point SHA recorded in the spec file at branch-creation time and runs:
+
+```
+git rebase --onto origin/<target> <fork-point>
+```
+
+This replays only the commits unique to your branch, correctly landing them on the new target.
+
+### Usage
+
+```powershell
+# Rebase onto main (default)
+.\scripts\rebase-onto.ps1
+
+# Rebase onto a different target
+.\scripts\rebase-onto.ps1 -TargetBranch develop
+```
+
+### Requirements
+
+The current branch's spec file (`docs/specs/<branch-name>.md`) MUST contain a `**Fork Point**`
+header field. This is recorded automatically by `create-task-spec.ps1` when the branch is
+created. If missing, add it manually:
+
+```markdown
+**Fork Point**: `<SHA>`
+```
+
+where `<SHA>` is the output of `git rev-parse <base-branch>` at the time the feature branch
+was created.
+
+### Conflict resolution
+
+`rebase-onto.ps1` automatically resolves `UD` conflicts — files deleted in `HEAD` but modified
+in the rebased commit. These are typically spec files that exist on the feature branch but not
+on `main`. Only `UD`-status entries are auto-resolved; any other conflict type requires manual
+resolution.
+
+## Templates
+
+| Template                     | Description                                       |
+| ---------------------------- | ------------------------------------------------- |
+| `templates/spec-template.md` | Spec file template used by `create-task-spec.ps1` |

@@ -40,10 +40,17 @@ Execution steps:
    - Use the derived `$workspace` and `$repo` values in all subsequent API calls — never hardcode or guess these values
 
 3. **Check if PR already exists**:
-   - Run `scripts/find-pr.ps1 -SourceBranch <current_branch> -Json` to query for an existing open PR
-   - Exit code 0 means a PR was found; parse the JSON output for `id`, `title`, and `url`
-   - Exit code 1 means no PR exists — continue with creation flow (proceed to step 5)
-   - If PR found: abort with the message "A PR already exists for this branch: <url>" and exit
+   - Load credentials: check `ATLASSIAN_API_KEY` / `ATLASSIAN_EMAIL` env vars, then `~/.atlassian`. If credentials are unavailable, skip this check and continue.
+   - Run the following PowerShell to query open PRs:
+     ```powershell
+     $email = if ($env:ATLASSIAN_EMAIL) { $env:ATLASSIAN_EMAIL } else { git config user.email }
+     $cred = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("${email}:${env:ATLASSIAN_API_KEY}"))
+     $resp = Invoke-RestMethod -Uri "https://api.bitbucket.org/2.0/repositories/$workspace/$repo/pullrequests?state=OPEN&pagelen=50" `
+       -Headers @{ Authorization = "Basic $cred" }
+     $match = $resp.values | Where-Object { $_.source.branch.name -eq '<current_branch>' } | Select-Object -First 1
+     ```
+   - If a match is found: abort with "A PR already exists for this branch: $($match.links.html.href)"
+   - If no match or API call fails: continue with creation flow (proceed to step 5)
 
 4. **Suggest code review** (if not already run):
    - Before analysing changes, suggest running `@dev-flow.review` first to catch issues early
@@ -141,34 +148,50 @@ Execution steps:
 
 10. **Create PR** (after user confirmation):
 
-    Call `scripts/create-pr.ps1` — it handles push, credential loading, API call, and manual fallback:
+    a. **Push the branch**:
+       ```bash
+       git push origin <current_branch>
+       ```
+       If push fails, abort with the error message.
 
-    ```powershell
-    .\scripts\create-pr.ps1 `
-      -Title         "<pr title>" `
-      -Description   "<pr description>" `
-      -TargetBranch  "<target branch>" `
-      -SourceBranch  "<current branch>"
-    ```
+    b. **Load credentials**:
+       - Check env vars `ATLASSIAN_API_KEY` and `ATLASSIAN_EMAIL`
+       - If not set, parse `~/.atlassian` (format: `KEY=VALUE` lines):
+         ```
+         ATLASSIAN_API_KEY=<api_key>
+         ATLASSIAN_EMAIL=<email>   # optional — defaults to git config user.email
+         ```
+       - If `ATLASSIAN_EMAIL` is still not set, use `git config user.email`
+       - If `ATLASSIAN_API_KEY` is missing: skip to step 10.d (manual fallback)
 
-    The script:
-    - Pushes the branch to origin (skip with `-NoPush`)
-    - Loads credentials from `ATLASSIAN_API_KEY` / `ATLASSIAN_EMAIL` env vars, then `~/.atlassian`
-    - Creates the PR via the Bitbucket API (POST)
-    - On API failure: prints a manual creation link and exits with code 2 (non-fatal)
+    c. **Create PR via Bitbucket API**:
+       ```powershell
+       $email = if ($env:ATLASSIAN_EMAIL) { $env:ATLASSIAN_EMAIL } else { git config user.email }
+       $cred = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("${email}:${env:ATLASSIAN_API_KEY}"))
+       $body = @{
+           title       = "<pr title>"
+           description = "<pr description>"
+           source      = @{ branch = @{ name = "<current_branch>" } }
+           destination = @{ branch = @{ name = "<target_branch>" } }
+       } | ConvertTo-Json -Depth 10
+       $response = Invoke-RestMethod `
+           -Uri "https://api.bitbucket.org/2.0/repositories/$workspace/$repo/pullrequests" `
+           -Method POST `
+           -Headers @{ Authorization = "Basic $cred"; "Content-Type" = "application/json" } `
+           -Body $body
+       ```
+       On success: display `$response.links.html.href`.
 
-    Credential file format (`~/.atlassian`):
+    d. **On API failure** (missing credentials or API error): provide the manual creation URL (non-fatal):
+       ```
+       https://bitbucket.org/$workspace/$repo/pull-requests/new?source=<current_branch>&destination=<target_branch>
+       ```
 
-    ```
-    ATLASSIAN_API_KEY=<api_key>
-    ATLASSIAN_EMAIL=<email>        # optional — defaults to git config user.email
-    ```
+11. **Report completion**:
 
-11. **Report completion** from script output:
-
-- **On success** (exit code 0): Display the PR URL and suggest next steps (add reviewers, link to Jira)
-- **On credential failure** (exit code 2, no API key): Show the fallback URL and instruct the user to set `ATLASSIAN_API_KEY`
-- **On API failure** (exit code 2, API error): Show the fallback URL and the error detail printed by the script
+- **On success**: Display the PR URL and suggest next steps (add reviewers, link to Jira)
+- **On credential failure**: Show the fallback URL from step 10.d and instruct the user to set `ATLASSIAN_API_KEY`
+- **On API failure**: Show the fallback URL from step 10.d and the error detail
 
 ## Behaviour Rules
 

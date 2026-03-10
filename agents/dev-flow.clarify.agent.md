@@ -22,10 +22,12 @@ Note: This clarification workflow is expected to run (and be completed) BEFORE i
 
 Execution steps:
 
-1. Run `scripts/check-prerequisites.ps1 -Json` from repo root **once**. Parse minimal JSON payload fields:
-   - `SPEC_FILE`
-   - If JSON parsing fails, abort and instruct user to re-run `@dev-flow.task` (or `@dev-flow.jira-task` if using Jira) or verify feature branch environment.
-   - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
+1. Determine the spec file path:
+   - Run `git rev-parse --abbrev-ref HEAD` to get `BRANCH`. If this fails or returns `HEAD`, abort: "Not on a named branch."
+   - Validate `BRANCH` matches `<prefix>/<name>` format (e.g. `feature/VAC-123-my-feature`). If not, abort: "Not on a task branch — expected `<prefix>/<name>` format. Run `@dev-flow.task` to create a feature branch."
+   - Derive `SPEC_FILE`: strip everything up to and including the first `/` from `BRANCH`, then prepend `docs/specs/` and append `.md`.
+     - Example: `feature/VAC-123-add-auth` → `docs/specs/VAC-123-add-auth.md`
+   - Verify the file exists. If not, abort: "Spec file not found: `<SPEC_FILE>`. Run `@dev-flow.task` (or `@dev-flow.jira-task`) to create the feature branch and spec first."
 
 2. Load the current feature spec file. Perform a structured ambiguity & coverage scan using this taxonomy. For each category, mark status: Clear / Partial / Missing. Produce an internal coverage map used for prioritization (do not output raw map unless no questions will be asked).
 

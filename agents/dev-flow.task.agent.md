@@ -88,7 +88,57 @@ Read `README.md` and `.github/instructions/copilot-instructions.md` to understan
 
    d. If the target branch already exists, offer to switch to it instead of creating a new one.
 
-   e. **Load spec template**: Read `templates/spec-template.md` to understand the required sections and structure before proceeding.
+   e. **Spec template structure**: Use the following template when creating the spec file, substituting all placeholders with actual values:
+
+   ```markdown
+   # Feature Specification: <SUMMARY>
+
+   **Feature Branch**: `<BRANCH_NAME>`
+   **Created**: <YYYY-MM-DD>
+   **Base Branch**: `<BASE_BRANCH>`
+   **Fork Point**: `<FORK_POINT_SHA>`
+   **Status**: Draft
+   **Input**: User description: "<DESCRIPTION>"
+
+   ## User Story - <Brief Title>
+
+   <Describe this user journey in plain language>
+
+   ## Functional Requirements
+
+   <List testable requirements derived from the user story. Each item must be unambiguous and verifiable.>
+
+   - [ ] Requirement 1
+   - [ ] Requirement 2
+
+   ## Assumptions
+
+   <Document any defaults or inferred decisions made during spec generation.>
+
+   - Assumption 1
+
+   ## Tasks
+
+   - Include exact file paths in descriptions
+
+   - [ ] Task 1 - <Title>: <Brief description>
+   - [ ] Task 2 - <Title>: <Brief description>
+
+   ## Documentation
+
+   <Describe the documentation changes required.>
+
+   ## Testing
+
+   > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
+
+   - [ ] Unit test in tests/test_<name>.py
+
+   ## Notes
+
+   - Verify tests fail before implementing
+   - Commit using conventional commits after each task or logical group
+   ```
 
    f. Present confirmation to user, including the base branch so the user can verify it is correct:
 
@@ -103,16 +153,22 @@ Read `README.md` and `.github/instructions/copilot-instructions.md` to understan
 
    _(The `Branch:` line MUST reflect the inferred prefix, e.g. `bugfix/` or `chore/` as appropriate.)_
 
-   g. After confirmation, create branch and spec file, passing `BASE_BRANCH` explicitly:
+   g. After confirmation, run the following steps:
 
-   ```powershell
-   .\.dev-flow\scripts\create-task-spec.ps1 `
-     -TicketId      "VAC-123" `
-     -BranchPrefix  "feature" `
-     -BaseBranch    "feature/my-current-branch" `
-     -Summary       "Add user authentication" `
-     -Description   "Full task description..."
-   ```
+   1. **Create the branch** from `BASE_BRANCH`:
+      ```bash
+      git checkout -b <branch-name> <BASE_BRANCH>
+      ```
+   2. **Record the fork point** (current tip of `BASE_BRANCH`):
+      ```bash
+      git rev-parse <BASE_BRANCH>
+      ```
+      Store as `FORK_POINT`.
+   3. **Create the spec directory** if it doesn't exist:
+      ```powershell
+      New-Item -ItemType Directory -Path docs/specs -Force | Out-Null
+      ```
+   4. **Write the spec file** to `docs/specs/<feature-name>.md` using the template from step 2.e, substituting all placeholders. Populate `**Base Branch**` with `BASE_BRANCH`, `**Fork Point**` with `FORK_POINT`, and `**Created**` with today's date.
 
 3. **Generate spec content**:
    1. Parse description - if empty, use SUMMARY as a minimal description.
@@ -129,7 +185,7 @@ Read `README.md` and `.github/instructions/copilot-instructions.md` to understan
    5. Generate Functional Requirements - each requirement MUST be testable.
    6. Document assumptions for any unspecified details.
 
-4. **Write spec file**: Write the completed specification to `SPEC_FILE` using the template structure, preserving section order and headings. The `**Base Branch**` and `**Fork Point**` header fields are pre-populated by `create-task-spec.ps1` — MUST NOT overwrite or blank them.
+4. **Write spec file**: Write the completed specification to `SPEC_FILE` using the template structure, preserving section order and headings. The `**Base Branch**` and `**Fork Point**` header fields are populated during branch creation (step 2.g) — MUST NOT overwrite or blank them.
 
 5. **MUST NOT** immediately start implementing code.
 

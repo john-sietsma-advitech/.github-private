@@ -54,19 +54,7 @@ Invoke agents in GitHub Copilot Chat using `@dev-flow.<name>`.
 
 - GitHub Copilot with organisation-level custom agents enabled (`github.copilot.chat.organizationCustomAgents.enabled: true` in VS Code settings)
 - PowerShell 7+ installed on each developer machine
-- Scripts and templates copied into each project repo (see [Per-project setup](#per-project-setup) below)
-
-### Per-project setup
-
-The agents reference scripts and templates that must exist in each project repository. Copy the following into the root of each project repo:
-
-```
-your-project/
-├── scripts/             # Copy from this repo
-├── templates/           # Copy from this repo
-└── docs/
-    └── specs/           # Create empty — spec files are stored here
-```
+- A `docs/specs/` directory in each project repo (created automatically by `@dev-flow.task` on first use)
 
 ### Jira / Bitbucket
 
@@ -82,6 +70,8 @@ ATLASSIAN_EMAIL=<EMAIL>   # optional — defaults to git config user.email
 
 ## Scripts
 
+The scripts in this repo are standalone command-line utilities. The agents no longer depend on them — all workflow logic is embedded directly in the agent instructions. Copy scripts into a project repo only if you want them as manual tools.
+
 | Script                    | Description                                                           |
 | ------------------------- | --------------------------------------------------------------------- |
 | `create-task-spec.ps1`    | Create a task branch and spec file from a ticket ID and summary       |
@@ -92,8 +82,7 @@ ATLASSIAN_EMAIL=<EMAIL>   # optional — defaults to git config user.email
 
 ## create-pr.ps1
 
-Creates a Bitbucket pull request. Called by the `@dev-flow.pr` agent but can
-also be used directly.
+Standalone script for creating a Bitbucket pull request. Can be used directly from the command line.
 
 ### Usage
 
